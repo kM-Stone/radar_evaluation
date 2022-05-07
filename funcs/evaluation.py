@@ -69,7 +69,7 @@ class RadarEva():
             hfmc_array = mem.hfmc(obs, pred, self.grade_list)  # 计算联列表参数
  
             # 计算其他指标类似, 只需基于已有的联列表参数, 因此指标数目不影响计算量
-            self.output['ts'][t, :] = mem.ts_hfmc(hfmc_array)
+            self.result['ts'][t, :] = mem.ts_hfmc(hfmc_array)
 
     def save_result(self, save_path):
         """
@@ -79,7 +79,7 @@ class RadarEva():
         :return bool: 保存成功返回True, 否则返回False, 并打印错误 
         """
         try:
-            self.output.to_netcdf(save_path)  # 保存格式待定
+            self.result.to_netcdf(save_path)  # 保存格式待定
             return True
         except Exception as error:
             print('评估结果保存出错：' + str(error))
