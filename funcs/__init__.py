@@ -1,3 +1,4 @@
 __all__ = ["data_retrieval",
-           "evaluation"
+           "evaluation",
+           "util"
            ]
