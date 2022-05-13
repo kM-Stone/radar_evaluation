@@ -5,7 +5,7 @@ import xarray as xr
 import meteva.method as mem
 from meteva.base import IV
 import matplotlib.pyplot as plt
-from utils import read_pic, image_resize
+from .utils import read_pic, image_resize
 
 
 class RadarEva():
@@ -57,8 +57,9 @@ class RadarEva():
         }, )
         for metric in self.metric_name:
             self.result[metric] = (['nowcast', 'grade'],
-                                    np.empty(shape=(len(self.nowcasts),
-                                                    len(self.grade_list))))
+                                   np.empty(shape=(len(self.nowcasts),
+                                                   len(self.grade_list)),
+                                            dtype=np.float32))
 
     def evaluate(self, interp=True, **kwarg):
         """
@@ -80,7 +81,7 @@ class RadarEva():
             for metric in self.metric_name:
                 tmp = getattr(mem, f'{metric}_hfmc')(hfmc_array)  # 通过字符串指定mem模块中的计算函数
                 self.result[metric][t, :] = np.where(
-                    np.abs(tmp - IV) < 1, np.nan, tmp)
+                    np.abs(tmp - IV) < 1, np.nan, tmp).astype(dtype=np.float32)
 
     def save_result(self, save_path):
         """
@@ -96,19 +97,21 @@ class RadarEva():
             print('评估结果保存出错：' + str(error))
             return False
 
-    def plot_result(self, metric_name='ts'):
+    def plot_result(self, ax=None, metric_name='ts'):
         """
         简单展示计算结果
         """
-
+        if ax is None:
+            _, ax = plt.subplots()
         for i, grade in enumerate(self.grade_list):
-            plt.plot(self.nowcasts,
-                     self.result[metric_name][:, i],
-                     marker='.',
-                     label=f'dbz = {grade}')
-            plt.legend()
-        plt.xlabel('nowcast (minutes)')
-        plt.title(metric_name)
+            ax.plot(self.nowcasts,
+                    self.result[metric_name][:, i],
+                    marker='.',
+                    label=f'dbz = {grade}')
+            ax.legend()
+        ax.set_xlabel('nowcast (minutes)')
+        ax.set_xticks(self.nowcasts)
+        ax.set_title(metric_name)
 
 
 # %%
