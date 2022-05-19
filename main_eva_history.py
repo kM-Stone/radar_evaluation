@@ -68,7 +68,7 @@ class RunHistory():
                 continue
 
 
-# %%
+# %% 测试运行
 if __name__ == '__main__':
     # 先修改 
     # test_eva = RunHistory('202205011205', '202205011605', moment=['1205', '1305', '1405', '1505', '1605'])
@@ -111,3 +111,4 @@ if __name__ == '__main__':
         return fig, ax
     ts_out = read_out(SAVE_DIR / 'ts')
     fig, ax  = plot_box(ts_out)
+    fig.savefig('./ts.jpg', facecolor='white')
