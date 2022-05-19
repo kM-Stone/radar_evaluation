@@ -34,7 +34,7 @@ class RunHistory():
             moment_list = time_condition['moment']  # TODO 时刻筛选可以再完善
 
         while obj_time <= end_time:
-            if time_condition:  # 如指定条件, 按条件返回; 如没有条件, 则按步长返回
+            if time_condition and moment_list:  # 如指定条件, 按条件返回; 如没有条件, 则按步长返回
                 if obj_time.strftime('%H%M') in moment_list:
                     # 不必要解析出所有的时刻, 也难以确定到底需要计算多少
                     yield obj_time.strftime('%Y%m%d%H%M')
@@ -60,7 +60,7 @@ class RunHistory():
                                metric_name=metric_name)
                 eva.evaluate()
                 eva.save_result(SAVE_DIR, t)
-                print('  结果已保存...')
+                print('  结果已保存')
             except StopIteration:
                 print('已达到指定终点时刻')
                 break
@@ -70,16 +70,19 @@ class RunHistory():
 
 # %%
 if __name__ == '__main__':
+    # 先修改 
     # test_eva = RunHistory('202205011205', '202205011605', moment=['1205', '1305', '1405', '1505', '1605'])
-    test_eva = RunHistory(st='202204011210',
-                          et='202205011210',
-                          moment=[ # 只选择每天13:05和15:05两个时刻
+    test_eva = RunHistory(st='202203011210', 
+                          et='202204011210',
+                          moment=[ # 指定需要的时刻, 例如选择每天13:05和15:05两个时刻
+                                   # 如不需要筛选, 则不需要moment参数
                               '1305',
                               '1505',
                           ])
-    test_eva.run(nowcasts=[30, 60, 90, 120],
-                 grade_list=[15, 35, 40],
-                 metric_name=['ts', 'pod', 'far', 'bias'])
+    test_eva.run(nowcasts=[30, 60, 90, 120],  # 外推时间
+                 grade_list=[15, 35, 40],  # 阈值列表
+                 metric_name=['ts', 'pod', 'far', 'bias']  # 指标名称
+                 )
 
 
 # %% 结果检查
@@ -88,7 +91,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     def read_out(save_path):
         '''
-        读取指定目录下的所有文件
+        读取指定目录下的所有文件, 无顺序
         '''
         array_list = []
         for file in os.listdir(save_path):
