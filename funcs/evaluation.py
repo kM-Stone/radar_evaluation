@@ -1,11 +1,10 @@
 # %%
-from matplotlib import markers
 import numpy as np
-import xarray as xr
 import meteva.method as mem
 from meteva.base import IV
 import matplotlib.pyplot as plt
-from .utils import read_pic, image_resize
+import os
+from funcs.utils import read_pic, image_resize
 
 
 class RadarEva():
@@ -48,18 +47,12 @@ class RadarEva():
     def __result_init(self):
         """
         初始化输出结果
-        
-        :return xarray.dataset: 输出的评估指标结果, 每个指标为二维数组
         """
-        self.result = xr.Dataset(coords={
-            'nowcast': (['nowcast'], self.nowcasts),
-            'grade': (['grade'], self.grade_list)
-        }, )
-        for metric in self.metric_name:
-            self.result[metric] = (['nowcast', 'grade'],
-                                   np.empty(shape=(len(self.nowcasts),
-                                                   len(self.grade_list)),
-                                            dtype=np.float32))
+
+        self.result = np.empty(shape=(len(self.metric_name),
+                                      len(self.nowcasts),
+                                      len(self.grade_list)),
+                               dtype=np.float32)
 
     def evaluate(self, interp=True, **kwarg):
         """
@@ -70,7 +63,7 @@ class RadarEva():
             # 每个文件保持原始分辨率大约100M, 如果分辨率降低5倍插值, 内存可以降低到4M, 结果误差约为0.002(1%)
             obs = read_pic(self.obs_filelist[t])
             pred = read_pic(self.pred_filelist[t])
-            # TODO 联列表参数时最主要的计算部分, 如果插值速度更快, 应当考虑插值降低分辨率后再计算
+            # 联列表参数时最主要的计算部分, 如果插值速度更快, 应当考虑插值降低分辨率后再计算
             if interp:
                 obs = image_resize(obs, **kwarg)
                 pred = image_resize(pred, **kwarg)
@@ -78,36 +71,45 @@ class RadarEva():
             hfmc_array = mem.hfmc(obs, pred, self.grade_list)  # 计算联列表参数
 
             # 评估指标只需基于已计算的联列表参数, 因此指标数目不影响计算量
-            for metric in self.metric_name:
-                tmp = getattr(mem, f'{metric}_hfmc')(hfmc_array)  # 通过字符串指定mem模块中的计算函数
-                self.result[metric][t, :] = np.where(
+            for i, metric in enumerate(self.metric_name):
+                tmp = getattr(mem, f'{metric}_hfmc')(
+                    hfmc_array)  # 通过字符串指定mem模块中的计算函数
+                self.result[i, t, :] = np.where(
                     np.abs(tmp - IV) < 1, np.nan, tmp).astype(dtype=np.float32)
 
-    def save_result(self, save_path):
+    def save_result(self, save_main_dir, save_basename):
         """
         保存评估结果
 
         :param str save_path: 保存路径 
         :return bool: 保存成功返回True, 否则返回False, 并打印错误 
         """
+
         try:
-            self.result.to_netcdf(save_path)  # 保存格式待定
-            return True
+            for i, metric in enumerate(self.metric_name):
+                save_dir = save_main_dir / metric
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir)
+                save_path = save_dir / f'{save_basename}.csv'
+                save_data = self.result[i, :, :]
+                np.savetxt(save_path, save_data, delimiter=",")
         except Exception as error:
             print('评估结果保存出错：' + str(error))
-            return False
 
-    def plot_result(self, ax=None, metric_name='ts'):
+    def plot_result(self, ax=None, metric_name='ts', **kw_arg):
         """
         简单展示计算结果
         """
+
+        metric_index = self.metric_name.index(metric_name)
         if ax is None:
             _, ax = plt.subplots()
         for i, grade in enumerate(self.grade_list):
             ax.plot(self.nowcasts,
-                    self.result[metric_name][:, i],
+                    self.result[metric_index, :, i],
                     marker='.',
-                    label=f'dbz = {grade}')
+                    label=f'dbz = {grade}',
+                    **kw_arg)
             ax.legend()
         ax.set_xlabel('nowcast (minutes)')
         ax.set_xticks(self.nowcasts)
