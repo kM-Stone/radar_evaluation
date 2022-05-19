@@ -108,18 +108,24 @@ class GetInput():
 
     def __isavailable(self, t):
         """
-        检测在给定时刻t能否从S3获取相关数据
+        检测在给定时刻t能否从本地或者S3获取相关数据
 
         :param str t: YYmmddHHMM
         :return bool
         """
-        # 注意这里只检测了文件夹, 如果t时刻对应的prefix文件夹存在, 则默认里面的文件是完整的, 不再逐个文件检测
-        response = self.__s3.client.list_objects_v2(
-            Bucket=BUCKET_NAME, Prefix=f'china_radar/DBZ_{t}_png')
-        if response['KeyCount'] <= 0:  # 说明t对应的Prefix不存在, 或Prefix下没有文件
-            return False
-        else:
+        # TODO 注意这里只检测了文件夹, 如果t时刻对应的prefix文件夹存在, 则默认里面的文件是完整的, 不再逐个文件检测
+
+        # 优先判断本地
+        if os.path.exists(LOCAL_DIR.joinpath(t)): 
             return True
+        else:  # t对应的本地文件夹不存在, 尝试从S3中检索
+            response = self.__s3.client.list_objects_v2(
+                Bucket=BUCKET_NAME, Prefix=f'china_radar/DBZ_{t}_png')
+            if response['KeyCount'] <= 0:  # 说明t对应的Prefix不存在, 或Prefix下没有文件
+                return False
+            else:
+                return True
+            
 
     def __get_obs_file(self):
         """
