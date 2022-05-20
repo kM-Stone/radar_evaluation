@@ -73,7 +73,7 @@ if __name__ == '__main__':
     # 先修改 
     # test_eva = RunHistory('202205011205', '202205011605', moment=['1205', '1305', '1405', '1505', '1605'])
     test_eva = RunHistory(st='202203011210', 
-                          et='202204011210',
+                          et='202203101210',
                           moment=[ # 指定需要的时刻, 例如选择每天13:05和15:05两个时刻
                                    # 如不需要筛选, 则不需要moment参数
                               '1305',
@@ -87,7 +87,8 @@ if __name__ == '__main__':
 
 # %% 结果检查
     import os
-    import numpy as np 
+    import pandas as pd
+    import numpy as np
     import matplotlib.pyplot as plt
     def read_out(save_path):
         '''
@@ -95,7 +96,8 @@ if __name__ == '__main__':
         '''
         array_list = []
         for file in os.listdir(save_path):
-            array_list.append(np.loadtxt(save_path / file,  delimiter=','))
+            array_list.append(
+                pd.read_csv(save_path / file,  index_col=0).values)
         return np.array(array_list) # 未按时间排序
 
     def plot_box(data, vmin=0, vmax=0.6):

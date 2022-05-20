@@ -1,5 +1,6 @@
 # %%
 import numpy as np
+import pandas as pd
 import meteva.method as mem
 from meteva.base import IV
 import matplotlib.pyplot as plt
@@ -48,11 +49,13 @@ class RadarEva():
         """
         初始化输出结果
         """
-
-        self.result = np.empty(shape=(len(self.metric_name),
-                                      len(self.nowcasts),
-                                      len(self.grade_list)),
-                               dtype=np.float32)
+        self.result = []
+        for _ in range(len(self.metric_name)): # 每个指标需要单独初始化, 不能用单元素列表直接×长度
+            self.result.append(
+                pd.DataFrame(index=[str(_)+'min' for _ in self.nowcasts],
+                             columns=[str(_)+'dbz' for _ in self.grade_list],
+                             dtype=np.float32).rename_axis('nowcast')
+            )
 
     def evaluate(self, interp=True, **kwarg):
         """
@@ -74,7 +77,7 @@ class RadarEva():
             for i, metric in enumerate(self.metric_name):
                 tmp = getattr(mem, f'{metric}_hfmc')(
                     hfmc_array)  # 通过字符串指定mem模块中的计算函数
-                self.result[i, t, :] = np.where(
+                self.result[i].iloc[t, :] = np.where(
                     np.abs(tmp - IV) < 1, np.nan, tmp).astype(dtype=np.float32)
 
     def save_result(self, save_main_dir, save_basename):
@@ -91,8 +94,8 @@ class RadarEva():
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
                 save_path = save_dir / f'{save_basename}.csv'
-                save_data = self.result[i, :, :]
-                np.savetxt(save_path, save_data, delimiter=",")
+                save_data = self.result[i]
+                save_data.to_csv(save_path)
         except Exception as error:
             print('评估结果保存出错：' + str(error))
 
@@ -106,7 +109,7 @@ class RadarEva():
             _, ax = plt.subplots()
         for i, grade in enumerate(self.grade_list):
             ax.plot(self.nowcasts,
-                    self.result[metric_index, :, i],
+                    self.result[metric_index].iloc[:, i],
                     marker='.',
                     label=f'dbz = {grade}',
                     **kw_arg)
